@@ -1,0 +1,49 @@
+name: Promote Backend QA to NEW
+
+on:
+  workflow_dispatch:
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout QA branch
+      - name: Checkout QA
+        uses: actions/checkout@v4
+        with:
+          ref: qa
+          fetch-depth: 0
+
+      # 2. Generate new release tag
+      - name: Generate Release Tag
+        id: version
+        run: |
+          VERSION="v$(date +'%Y.%m.%d').${GITHUB_RUN_NUMBER}"
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      # 3. Create Git Tag (nothing deleted, history preserved)
+      - name: Create Tag
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git tag $VERSION
+          git push origin $VERSION
+
+      # 4. Update NEW branch (chat) to match QA
+      - name: Update NEW Branch
+        run: |
+          git checkout chat
+          git merge qa --no-ff -m "Promote QA to NEW - $VERSION"
+          git push origin chat
+
+      # 5. Deploy Backend NEW
+      - name: Deploy Backend NEW
+        run: |
+          echo "Deploying backend NEW using tag $VERSION"
+          # Replace this with your real deployment command
+
+      # 6. Print Final Version
+      - name: Promotion Complete
+        run: echo "Backend successfully promoted with version $VERSION"
